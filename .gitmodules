@@ -1,0 +1,15 @@
+[submodule "vendor/cpp-httplib"]
+	path = vendor/cpp-httplib
+	url = https://github.com/yhirose/cpp-httplib.git
+[submodule "vendor/json"]
+	path = vendor/json
+	url = https://github.com/nlohmann/json.git
+[submodule "vendor/lv_drivers"]
+	path = vendor/lv_drivers
+	url = https://github.com/lvgl/lv_drivers.git
+[submodule "vendor/lvgl"]
+	path = vendor/lvgl
+	url = https://github.com/lvgl/lvgl.git
+[submodule "vendor/ESPresso-UI"]
+	path = vendor/ESPresso-UI
+	url = git@github.com:stockwell/ESPresso-UI.git
