@@ -10,7 +10,28 @@ BoilerController::BoilerController(const std::string& url)
     auto res = m_httpClient.Get("/api/v1/temp/raw");
     auto j3 = nlohmann::json::parse(res->body);
 
-    m_currentTemp = j3["raw"].get<float>();
+    m_currentTemp = j3["current"].get<float>();
+
+	printf("%s\n", to_string(j3).c_str());
+
+	res = m_httpClient.Get("/api/v1/pid/terms");
+	j3 = nlohmann::json::parse(res->body);
+
+	printf("%s\n", to_string(j3).c_str());
+
+	const char* body = "{\n"
+					   "\"Kp\": 500,\n"
+					   "\"Ki\": 200,\n"
+					   "\"Kd\": 25\n"
+					   "}";
+
+	res = m_httpClient.Post("/api/v1/pid/terms", body, "application/json");
+
+	const char* bodyTemp = "{\n"
+					   "\"target\": 0\n"
+					   "}";
+
+	res = m_httpClient.Post("/api/v1/temp/raw", bodyTemp, "application/json");
 }
 
 
@@ -20,6 +41,9 @@ void BoilerController::registerBoilerTemperatureDelegate(BoilerTemperatureDelega
         return;
 
     m_delegates.emplace(delegate);
+
+	delegate->onBoilerCurrentTempChanged(m_currentTemp);
+	delegate->onBoilerTargetTempChanged(m_targetTemp);
 }
 
 void BoilerController::deregisterBoilerTemperatureDelegate(BoilerTemperatureDelegate* delegate)
@@ -52,8 +76,32 @@ void BoilerController::setBoilerTargetTemp(float temp)
 
 void BoilerController::tick()
 {
+	static int delay = 100;
+
+	if (!--delay)
+	{
+		delay = 100;
+		auto res = m_httpClient.Get("/api/v1/sys/info");
+		auto j3 = nlohmann::json::parse(res->body);
+		auto val = j3["free_heap"].get<int>();
+
+		printf("Heap: %dKB\n", val/1024);
+	}
+
     auto res = m_httpClient.Get("/api/v1/temp/raw");
     auto j3 = nlohmann::json::parse(res->body);
+	auto val = j3["current"].get<float>();
 
-    setBoilerCurrentTemp(j3["raw"].get<float>());
+    setBoilerCurrentTemp(val);
+
+	if (val < 25)
+	{
+		const char* bodyTemp = "{\n"
+							   "\"target\": 93\n"
+							   "}";
+
+		res = m_httpClient.Post("/api/v1/temp/raw", bodyTemp, "application/json");
+
+	}
+
 }
