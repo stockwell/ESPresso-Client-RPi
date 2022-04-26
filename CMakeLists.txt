@@ -41,10 +41,10 @@ add_subdirectory(vendor/ESPresso-UI)
 
 include_directories(
         ${INCLUDES}
-        ${ESPresso-UI-INCLUDES}
+        ${ESPRESSO-UI-INCLUDES}
 )
 
-add_executable(ESPresso-Client ${SOURCE} ${ESPresso-UI-SOURCE})
+add_executable(ESPresso-Client ${SOURCE} ${ESPRESSO-UI-SOURCE})
 
 target_link_libraries(ESPresso-Client PRIVATE
         lvgl::lvgl

@@ -86,6 +86,9 @@ void BoilerController::tick()
 		if (val.currentTemp <= 26)
 			setBoilerTargetTemp(93);
 
+		if (val.currentTemp >= 92)
+			setBoilerTargetTemp(25);
+
 		m_pollFut = std::async(std::launch::async, &BoilerController::pollRemoteServer, this);
 	}
 }
