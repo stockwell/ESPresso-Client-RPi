@@ -3,7 +3,7 @@
 #include "nlohmann/json.hpp"
 
 BoilerController::BoilerController(const std::string& url)
-    : m_httpClient(url)
+	: m_httpClient(url)
 {
 	m_httpClient.set_keep_alive(true);
 
@@ -34,10 +34,10 @@ BoilerController::BoilerController(const std::string& url)
 
 void BoilerController::registerBoilerTemperatureDelegate(BoilerTemperatureDelegate* delegate)
 {
-    if (m_delegates.find(delegate) != m_delegates.end())
-        return;
+	if (m_delegates.find(delegate) != m_delegates.end())
+		return;
 
-    m_delegates.emplace(delegate);
+	m_delegates.emplace(delegate);
 
 	delegate->onBoilerCurrentTempChanged(m_currentTemp);
 	delegate->onBoilerTargetTempChanged(m_targetTemp);
@@ -45,35 +45,35 @@ void BoilerController::registerBoilerTemperatureDelegate(BoilerTemperatureDelega
 
 void BoilerController::deregisterBoilerTemperatureDelegate(BoilerTemperatureDelegate* delegate)
 {
-    if (auto it = m_delegates.find(delegate); it != m_delegates.end())
-        m_delegates.erase(it);
+	if (auto it = m_delegates.find(delegate); it != m_delegates.end())
+		m_delegates.erase(it);
 }
 
 void BoilerController::setBoilerCurrentTemp(float temp)
 {
-    if (m_currentTemp == temp)
-        return;
+	if (m_currentTemp == temp)
+		return;
 
-    m_currentTemp = temp;
+	m_currentTemp = temp;
 
-    for (auto delegate : m_delegates)
-        delegate->onBoilerCurrentTempChanged(temp);
+	for (auto delegate : m_delegates)
+		delegate->onBoilerCurrentTempChanged(temp);
 }
 
 void BoilerController::setBoilerTargetTemp(float temp)
 {
-    if (m_targetTemp == temp)
-        return;
+	if (m_targetTemp == temp)
+		return;
 
-    m_targetTemp = temp;
+	m_targetTemp = temp;
 
 	nlohmann::json tempSetJSON;
 	tempSetJSON["target"] = temp;
 
 	auto res = m_httpClient.Post("/api/v1/temp/raw", tempSetJSON.dump().c_str(), "application/json");
 
-    for (auto delegate : m_delegates)
-        delegate->onBoilerTargetTempChanged(temp);
+	for (auto delegate : m_delegates)
+		delegate->onBoilerTargetTempChanged(temp);
 }
 
 void BoilerController::tick()

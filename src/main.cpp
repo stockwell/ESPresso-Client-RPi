@@ -11,14 +11,12 @@
 #include "lv_drivers/display/fbdev.h"
 #include "lv_drivers/indev/evdev.h"
 
-#include <unistd.h>
-#include <pthread.h>
-
 #include <netdb.h>
+#include <unistd.h>
 
 #include "EspressoUI.hpp"
 
-#define DISP_BUF_SIZE (800 * 480)
+#define  (800 * 480)
 
 static void hal_init();
 static void timer_init();
