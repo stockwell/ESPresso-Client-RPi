@@ -68,7 +68,7 @@
 
 /*Number of the intermediate memory buffer used during rendering and other internal processing mechanisms.
  *You will see an error log message if there wasn't enough buffers. */
-#define LV_MEM_BUF_MAX_NUM 16
+#define LV_MEM_BUF_MAX_NUM 32
 
 /*Use the standard `memcpy` and `memset` instead of LVGL's own functions. (Might or might not be faster).*/
 #define LV_MEMCPY_MEMSET_STD 0
@@ -78,7 +78,7 @@
  *====================*/
 
 /*Default display refresh period. LVG will redraw changed areas with this period time*/
-#define LV_DISP_DEF_REFR_PERIOD 16      /*[ms]*/
+#define LV_DISP_DEF_REFR_PERIOD 16/*[ms]*/
 
 /*Input device read period in milliseconds*/
 #define LV_INDEV_DEF_READ_PERIOD 30     /*[ms]*/
@@ -661,7 +661,7 @@
 *==================*/
 
 /*Enable the examples to be built with the library*/
-#define LV_BUILD_EXAMPLES 1
+#define LV_BUILD_EXAMPLES 0
 
 /*===================
  * DEMO USAGE

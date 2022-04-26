@@ -8,7 +8,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
 set(SOURCE
         src/main.cpp
         src/boiler/BoilerController.cpp
-        vendor/ESPresso-UI/settings/SettingsManagerDummyImpl.cpp
+        vendor/ESPresso-UI/Settings/SettingsManagerDummyImpl.cpp
 )
 
 set(INCLUDES
@@ -36,11 +36,18 @@ add_compile_definitions(LV_LVGL_H_INCLUDE_SIMPLE)
 add_subdirectory(vendor/lvgl)
 add_subdirectory(vendor/lv_drivers)
 
-
 # ESPresso-UI
 add_subdirectory(vendor/ESPresso-UI)
 
-include_directories(${INCLUDES} ${ESPresso-UI-INCLUDES})
+include_directories(
+        ${INCLUDES}
+        ${ESPresso-UI-INCLUDES}
+)
 
 add_executable(ESPresso-Client ${SOURCE} ${ESPresso-UI-SOURCE})
-target_link_libraries(ESPresso-Client PRIVATE lvgl::lvgl lvgl::drivers pthread)
+
+target_link_libraries(ESPresso-Client PRIVATE
+        lvgl::lvgl
+        lvgl::drivers
+        pthread
+)

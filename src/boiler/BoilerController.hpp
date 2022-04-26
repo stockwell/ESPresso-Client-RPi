@@ -1,6 +1,7 @@
 #pragma once
 
 #include <set>
+#include <future>
 
 #include <httplib.h>
 
@@ -31,6 +32,14 @@ public:
     void tick();
 
 private:
+	struct PollData
+	{
+		float currentTemp;
+	};
+
+	PollData pollRemoteServer();
+	std::future<PollData>					m_pollFut;
+
     std::set<BoilerTemperatureDelegate*>    m_delegates;
     httplib::Client                         m_httpClient;
 

@@ -13,7 +13,6 @@
 
 #include <unistd.h>
 #include <pthread.h>
-#include <signal.h>
 
 #include <netdb.h>
 
@@ -41,34 +40,24 @@ int main(int, char**)
 	settings["SteamTemp"] = 130;
 
 	struct hostent* hp = gethostbyname("coffee.local");
-	std::string url = "http://";
 
 	if (! hp)
 		return 1;
 
-	url += inet_ntoa(*(struct in_addr*)(hp->h_addr_list[0]));
+	auto url = "http://" + std::string(inet_ntoa(*(struct in_addr*)(hp->h_addr_list[0])));
 
 	auto boiler = std::make_unique<BoilerController>(url);
 	auto ui = std::make_unique<EspressoUI>();
 
 	ui->init(boiler.get());
-	boiler->setBoilerTargetTemp(settings["BrewTemp"].getAs<int>());
 
 	settings.save();
-
-	// Yeah, nah
-	std::thread{ [&](){
-		while(1)
-		{
-			boiler->tick();
-			usleep(20000);
-		}
-	}}.detach();
 
 	/*Handle LitlevGL tasks (tickless mode)*/
 	while (1)
 	{
 		lv_timer_handler();
+		boiler->tick();
 		usleep(500);
 	}
 
@@ -102,7 +91,7 @@ static void hal_init()
 	disp_drv.ver_res = 480;
 	lv_disp_drv_register(&disp_drv);
 
-	evdev_init();
+	evdev_set_file("/dev/input/by-path/platform-fe205000.i2c-event");
 	static lv_indev_drv_t indev_drv_1;
 	lv_indev_drv_init(&indev_drv_1); /*Basic initialization*/
 	indev_drv_1.type = LV_INDEV_TYPE_POINTER;
