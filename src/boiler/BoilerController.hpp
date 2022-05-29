@@ -10,6 +10,8 @@ class BoilerTemperatureDelegate
 public:
 	virtual void onBoilerCurrentTempChanged(float temp)	{ };
 	virtual void onBoilerTargetTempChanged(float temp) { };
+	virtual void onBoilerBrewTempChanged(float temp) { };
+	virtual void onBoilerSteamTempChanged(float temp) { };
 };
 
 class BoilerController
@@ -26,8 +28,11 @@ public:
 	void registerBoilerTemperatureDelegate(BoilerTemperatureDelegate* delegate);
 	void deregisterBoilerTemperatureDelegate(BoilerTemperatureDelegate* delegate);
 
-	void setBoilerTargetTemp(float temp);
-	void setBoilerCurrentTemp(float temp);
+	void setBoilerBrewTemp(float temp);
+	void setBoilerSteamTemp(float temp);
+
+	void updateBoilerTargetTemp(float temp);
+	void updateBoilerCurrentTemp(float temp);
 
 	void tick();
 
@@ -35,6 +40,7 @@ private:
 	struct PollData
 	{
 		float currentTemp;
+		float targetTemp;
 	};
 
 	PollData pollRemoteServer();
@@ -45,6 +51,8 @@ private:
 
 	float m_targetTemp	= 0.0;
 	float m_currentTemp	= 0.0;
+	float m_brewTarget = 0.0;
+	float m_steamTarget = 0.0;
 
 	float m_P;
 	float m_I;

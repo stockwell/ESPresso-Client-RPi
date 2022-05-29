@@ -29,9 +29,8 @@ int main(int, char**)
 	hal_init();
 
 	auto& settings = SettingsManager::get();
-
-	settings["BrewTemp"] = 93;
-	settings["SteamTemp"] = 130;
+	settings["BrewTemp"] = 93.0f;
+	settings["SteamTemp"] = 150.0f;
 
 	struct hostent* hp = gethostbyname("coffee.local");
 
@@ -44,7 +43,8 @@ int main(int, char**)
 	auto ui = std::make_unique<EspressoUI>();
 
 	ui->init(boiler.get());
-	boiler->setBoilerTargetTemp(settings["BrewTemp"].getAs<int>());
+	boiler->setBoilerBrewTemp(settings["BrewTemp"].getAs<float>());
+	boiler->setBoilerSteamTemp(settings["SteamTemp"].getAs<float>());
 
 	settings.save();
 

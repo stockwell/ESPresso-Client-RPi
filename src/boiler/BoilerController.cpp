@@ -1,4 +1,5 @@
 #include "BoilerController.hpp"
+#include "SettingsManager.hpp"
 
 #include "nlohmann/json.hpp"
 
@@ -11,8 +12,11 @@ BoilerController::BoilerController(const std::string& url)
 	auto j3 = nlohmann::json::parse(res->body);
 
 	m_currentTemp = j3["current"].get<float>();
+	m_targetTemp = j3["target"].get<float>();
+	m_brewTarget = j3["brew"].get<float>();
+	m_steamTarget = j3["steam"].get<float>();
 
-	printf("%s\n", to_string(j3).c_str());
+	auto& settings = SettingsManager::get();
 
 	res = m_httpClient.Get("/api/v1/pid/terms");
 	j3 = nlohmann::json::parse(res->body);
@@ -20,17 +24,14 @@ BoilerController::BoilerController(const std::string& url)
 	printf("%s\n", to_string(j3).c_str());
 
 	nlohmann::json pidSetJSON;
-	pidSetJSON["Kp"] = 10;
-	pidSetJSON["Ki"] = 50;
-	pidSetJSON["Kd"] = 0.9;
+	pidSetJSON["Kp"] = 100.0f;
+	pidSetJSON["Ki"] = 20.0f;
+	pidSetJSON["Kd"] = 50.0f;
 
 	res = m_httpClient.Post("/api/v1/pid/terms", pidSetJSON.dump(), "application/json");
 
-	setBoilerTargetTemp(25);
-
 	m_pollFut = std::async(&BoilerController::pollRemoteServer, this);
 }
-
 
 void BoilerController::registerBoilerTemperatureDelegate(BoilerTemperatureDelegate* delegate)
 {
@@ -49,7 +50,18 @@ void BoilerController::deregisterBoilerTemperatureDelegate(BoilerTemperatureDele
 		m_delegates.erase(it);
 }
 
-void BoilerController::setBoilerCurrentTemp(float temp)
+void BoilerController::updateBoilerTargetTemp(float temp)
+{
+	if (m_targetTemp == temp)
+		return;
+
+	m_targetTemp = temp;
+
+	for (auto delegate : m_delegates)
+		delegate->onBoilerTargetTempChanged(temp);
+}
+
+void BoilerController::updateBoilerCurrentTemp(float temp)
 {
 	if (m_currentTemp == temp)
 		return;
@@ -60,20 +72,36 @@ void BoilerController::setBoilerCurrentTemp(float temp)
 		delegate->onBoilerCurrentTempChanged(temp);
 }
 
-void BoilerController::setBoilerTargetTemp(float temp)
+void BoilerController::setBoilerBrewTemp(float temp)
 {
-	if (m_targetTemp == temp)
+	if (m_brewTarget == temp)
 		return;
 
-	m_targetTemp = temp;
+	m_brewTarget = temp;
 
 	nlohmann::json tempSetJSON;
-	tempSetJSON["target"] = temp;
+	tempSetJSON["brewTarget"] = temp;
 
-	auto res = m_httpClient.Post("/api/v1/temp/raw", tempSetJSON.dump().c_str(), "application/json");
+	auto res = m_httpClient.Post("/api/v1/temp/raw", tempSetJSON.dump(), "application/json");
 
 	for (auto delegate : m_delegates)
-		delegate->onBoilerTargetTempChanged(temp);
+		delegate->onBoilerBrewTempChanged(temp);
+}
+
+void BoilerController::setBoilerSteamTemp(float temp)
+{
+	if (m_steamTarget == temp)
+		return;
+
+	m_steamTarget = temp;
+
+	nlohmann::json tempSetJSON;
+	tempSetJSON["steamTarget"] = temp;
+
+	auto res = m_httpClient.Post("/api/v1/temp/raw", tempSetJSON.dump(), "application/json");
+
+	for (auto delegate : m_delegates)
+		delegate->onBoilerSteamTempChanged(temp);
 }
 
 void BoilerController::tick()
@@ -81,13 +109,8 @@ void BoilerController::tick()
 	if (m_pollFut.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
 	{
 		auto val = m_pollFut.get();
-		setBoilerCurrentTemp(val.currentTemp);
-
-		if (val.currentTemp <= 26)
-			setBoilerTargetTemp(93);
-
-		if (val.currentTemp >= 92)
-			setBoilerTargetTemp(25);
+		updateBoilerCurrentTemp(val.currentTemp);
+		updateBoilerTargetTemp(val.targetTemp);
 
 		m_pollFut = std::async(std::launch::async, &BoilerController::pollRemoteServer, this);
 	}
@@ -98,18 +121,23 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 	auto res = m_httpClient.Get("/api/v1/temp/raw");
 	auto tempJSON = nlohmann::json::parse(res->body);
 	auto boilerTemp = tempJSON["current"].get<float>();
+	auto targetTemp = tempJSON["target"].get<float>();
 
 	static int delay = 100;
-
 	if (!--delay)
 	{
-		delay = 100;
+		delay = 200;
 		res = m_httpClient.Get("/api/v1/sys/info");
 		auto sysinfoJSON = nlohmann::json::parse(res->body);
 		auto freeHeap = sysinfoJSON["free_heap"].get<int>();
 
+		res = m_httpClient.Get("/api/v1/pressure/raw");
+		auto pressureJSON = nlohmann::json::parse(res->body);
+		auto pressureRaw = pressureJSON["current"].get<float>();
+
 		printf("Heap: %dKB\n", freeHeap/1024);
+		printf("Pressure: %.02f\n\n", pressureRaw);
 	}
 
-	return { boilerTemp };
+	return { boilerTemp, targetTemp };
 }
