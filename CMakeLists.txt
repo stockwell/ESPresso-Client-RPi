@@ -8,7 +8,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
 set(SOURCE
         src/main.cpp
         src/boiler/BoilerController.cpp
-        vendor/ESPresso-UI/Settings/SettingsManagerDummyImpl.cpp
+	vendor/ESPresso-UI/Settings/SettingsManagerDummyImpl.cpp
 )
 
 set(INCLUDES

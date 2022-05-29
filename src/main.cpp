@@ -16,7 +16,7 @@
 
 #include "EspressoUI.hpp"
 
-#define  (800 * 480)
+#define  DISP_BUF_SIZE (800 * 480)
 
 static void hal_init();
 static void timer_init();
@@ -33,9 +33,9 @@ int main(int, char**)
 	timer_init();
 
 	auto& settings = SettingsManager::get();
+	settings["BrewTemp"] = 93.0f;
+	settings["SteamTemp"] = 150.0f;
 
-	settings["BrewTemp"] = 93;
-	settings["SteamTemp"] = 130;
 
 	struct hostent* hp = gethostbyname("coffee.local");
 
