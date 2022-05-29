@@ -5,23 +5,26 @@
 
 #include <httplib.h>
 
+enum class BoilerState
+{
+	Heating,
+	Ready,
+	Brewing,
+};
+
 class BoilerTemperatureDelegate
 {
 public:
-	virtual void onBoilerCurrentTempChanged(float temp)	{ };
-	virtual void onBoilerTargetTempChanged(float temp) { };
-	virtual void onBoilerBrewTempChanged(float temp) { };
-	virtual void onBoilerSteamTempChanged(float temp) { };
+	virtual void onBoilerCurrentTempChanged(float temp)		{ };
+	virtual void onBoilerTargetTempChanged(float temp)		{ };
+	virtual void onBoilerBrewTempChanged(float temp)		{ };
+	virtual void onBoilerSteamTempChanged(float temp)		{ };
+	virtual void onBoilerStateChanged(BoilerState state)	{ };
 };
 
 class BoilerController
 {
 public:
-	enum class BoilerState
-	{
-		Heating,
-		Ready,
-	};
 
 	BoilerController(const std::string& url);
 
@@ -33,28 +36,28 @@ public:
 
 	void updateBoilerTargetTemp(float temp);
 	void updateBoilerCurrentTemp(float temp);
+	void updateBoilerState(int state);
 
 	void tick();
 
 private:
 	struct PollData
 	{
-		float currentTemp;
-		float targetTemp;
+		float	currentTemp;
+		float	targetTemp;
+		int		state;
 	};
 
 	PollData pollRemoteServer();
-	std::future<PollData> m_pollFut;
+	std::future<PollData>					m_pollFut;
 
-	std::set<BoilerTemperatureDelegate*> m_delegates;
-	httplib::Client m_httpClient;
+	BoilerState								m_state;
+	std::set<BoilerTemperatureDelegate*>	m_delegates;
+	httplib::Client							m_httpClient;
 
 	float m_targetTemp	= 0.0;
 	float m_currentTemp	= 0.0;
 	float m_brewTarget = 0.0;
 	float m_steamTarget = 0.0;
 
-	float m_P;
-	float m_I;
-	float m_D;
 };

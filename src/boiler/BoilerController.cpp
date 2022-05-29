@@ -72,6 +72,20 @@ void BoilerController::updateBoilerCurrentTemp(float temp)
 		delegate->onBoilerCurrentTempChanged(temp);
 }
 
+void BoilerController::updateBoilerState(int state)
+{
+	auto currentState = static_cast<BoilerState>(state);
+
+	if (m_state == currentState)
+		return;
+
+	m_state = currentState;
+
+	for (auto delegate : m_delegates)
+		delegate->onBoilerStateChanged(currentState);
+
+}
+
 void BoilerController::setBoilerBrewTemp(float temp)
 {
 	if (m_brewTarget == temp)
@@ -111,6 +125,7 @@ void BoilerController::tick()
 		auto val = m_pollFut.get();
 		updateBoilerCurrentTemp(val.currentTemp);
 		updateBoilerTargetTemp(val.targetTemp);
+		updateBoilerState(val.state);
 
 		m_pollFut = std::async(std::launch::async, &BoilerController::pollRemoteServer, this);
 	}
@@ -122,6 +137,7 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 	auto tempJSON = nlohmann::json::parse(res->body);
 	auto boilerTemp = tempJSON["current"].get<float>();
 	auto targetTemp = tempJSON["target"].get<float>();
+	auto boilerState = tempJSON["state"].get<int>();
 
 	static int delay = 100;
 	if (!--delay)
@@ -139,5 +155,5 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 		printf("Pressure: %.02f\n\n", pressureRaw);
 	}
 
-	return { boilerTemp, targetTemp };
+	return { boilerTemp, targetTemp, boilerState };
 }
