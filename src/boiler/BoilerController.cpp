@@ -25,8 +25,8 @@ BoilerController::BoilerController(const std::string& url)
 
 	nlohmann::json pidSetJSON;
 	pidSetJSON["Kp"] = 100.0f;
-	pidSetJSON["Ki"] = 20.0f;
-	pidSetJSON["Kd"] = 50.0f;
+	pidSetJSON["Ki"] = 1.0f;
+	pidSetJSON["Kd"] = 0.5f;
 
 	res = m_httpClient.Post("/api/v1/pid/terms", pidSetJSON.dump(), "application/json");
 
