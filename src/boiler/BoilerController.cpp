@@ -9,19 +9,17 @@ BoilerController::BoilerController(const std::string& url)
 	m_httpClient.set_keep_alive(true);
 
 	auto res = m_httpClient.Get("/api/v1/temp/raw");
-	auto j3 = nlohmann::json::parse(res->body);
+	auto tempJSON = nlohmann::json::parse(res->body);
 
-	m_currentTemp = j3["current"].get<float>();
-	m_targetTemp = j3["target"].get<float>();
-	m_brewTarget = j3["brew"].get<float>();
-	m_steamTarget = j3["steam"].get<float>();
+	m_currentTemp = tempJSON["current"].get<float>();
+	m_targetTemp = tempJSON["target"].get<float>();
+	m_brewTarget = tempJSON["brew"].get<float>();
+	m_steamTarget = tempJSON["steam"].get<float>();
 
 	auto& settings = SettingsManager::get();
 
-	res = m_httpClient.Get("/api/v1/pid/terms");
-	j3 = nlohmann::json::parse(res->body);
-
-	printf("%s\n", to_string(j3).c_str());
+	settings["BrewTemp"].registerDelegate(this);
+	settings["SteamTemp"].registerDelegate(this);
 
 	nlohmann::json pidSetJSON;
 	pidSetJSON["Kp"] = 100.0f;
@@ -131,6 +129,14 @@ void BoilerController::tick()
 	}
 }
 
+void BoilerController::onChanged(const std::string& key, float val)
+{
+	if (key == "BrewTemp")
+		m_brewTarget = val;
+	else if (key == "SteamTemp")
+		m_steamTarget = val;
+}
+
 BoilerController::PollData BoilerController::pollRemoteServer()
 {
 	auto res = m_httpClient.Get("/api/v1/temp/raw");
@@ -138,6 +144,23 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 	auto boilerTemp = tempJSON["current"].get<float>();
 	auto targetTemp = tempJSON["target"].get<float>();
 	auto boilerState = tempJSON["state"].get<int>();
+
+
+	if (m_brewTarget != tempJSON["brew"].get<float>())
+	{
+		nlohmann::json brewTargetJSON;
+		brewTargetJSON["brewTarget"] = m_brewTarget;
+
+		res = m_httpClient.Post("/api/v1/temp/raw", brewTargetJSON.dump(), "application/json");
+	}
+
+	if (m_steamTarget != tempJSON["steam"].get<float>())
+	{
+		nlohmann::json steamTargetJSON;
+		steamTargetJSON["steamTarget"] = m_steamTarget;
+
+		res = m_httpClient.Post("/api/v1/temp/raw", steamTargetJSON.dump(), "application/json");
+	}
 
 	static int delay = 100;
 	if (!--delay)

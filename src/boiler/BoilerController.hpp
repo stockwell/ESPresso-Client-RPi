@@ -1,5 +1,7 @@
 #pragma once
 
+#include "SettingsManager.hpp"
+
 #include <set>
 #include <future>
 
@@ -22,7 +24,7 @@ public:
 	virtual void onBoilerStateChanged(BoilerState state)	{ };
 };
 
-class BoilerController
+class BoilerController : public SettingDelegate
 {
 public:
 
@@ -39,6 +41,9 @@ public:
 	void updateBoilerState(int state);
 
 	void tick();
+
+	// SettingDelegate i/f
+	void onChanged(const std::string& key, float val) override;
 
 private:
 	struct PollData
