@@ -50,6 +50,8 @@ int main(int, char**)
 
 	EspressoConnectionScreen connectionScreen(kHostname);
 
+	bool pendingResolve = true;
+
 	/*Handle LitlevGL tasks (tickless mode)*/
 	while (1)
 	{
@@ -59,14 +61,19 @@ int main(int, char**)
 		if (boiler)
 			boiler->tick();
 
-		if (resolveFut.valid() && resolveFut.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
+		if (pendingResolve)
 		{
+			if (lv_tick_get() < 4700 || resolveFut.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
+				continue;
+
 			auto url = resolveFut.get();
 			if (url.empty())
 			{
 				resolveFut = std::async(&resolveURL);
 				continue;
 			}
+
+			pendingResolve = false;
 
 			boiler = std::make_unique<BoilerController>(url);
 			ui = std::make_unique<EspressoUI>();
