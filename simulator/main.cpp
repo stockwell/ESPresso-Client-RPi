@@ -26,6 +26,7 @@ static std::string resolveURL();
 namespace
 {
 	const char* kHostname = "coffee.local";
+	const auto kMinTicks = 0;//4800;
 }
 
 int main(int, char**)
@@ -44,6 +45,10 @@ int main(int, char**)
 
 	EspressoConnectionScreen connectionScreen(kHostname);
 
+	bool pendingResolve = true;
+
+	printf("Starting ESPresso-Client, resolving %s... ", kHostname);
+
 	/*Handle LitlevGL tasks (tickless mode)*/
 	while (true)
 	{
@@ -53,14 +58,20 @@ int main(int, char**)
 		lv_timer_handler();
 		usleep(500);
 
-		if (resolveFut.valid() && resolveFut.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
+		if (pendingResolve)
 		{
+			if (resolveFut.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
+				continue;
+
 			auto url = resolveFut.get();
+
 			if (url.empty())
 			{
 				resolveFut = std::async(&resolveURL);
 				continue;
 			}
+
+			pendingResolve = false;
 
 			boiler = std::make_unique<BoilerController>(url);
 			ui = std::make_unique<EspressoUI>();
@@ -157,6 +168,8 @@ static std::string resolveURL()
 
 	if (! hp)
 		return "";
+
+	printf("completed after %u ticks\n", lv_tick_get());
 
 	return "http://" + std::string(inet_ntoa(*(struct in_addr*)(hp->h_addr_list[0])));
 }

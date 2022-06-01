@@ -52,6 +52,8 @@ int main(int, char**)
 
 	bool pendingResolve = true;
 
+	printf("Starting ESPresso-Client, resolving %s... ", kHostname);
+
 	/*Handle LitlevGL tasks (tickless mode)*/
 	while (1)
 	{
@@ -142,6 +144,8 @@ static std::string resolveURL()
 
 	if (! hp)
 		return "";
+
+	printf("completed after %u ticks\n", lv_tick_get());
 
 	return "http://" + std::string(inet_ntoa(*(struct in_addr*)(hp->h_addr_list[0])));
 }
