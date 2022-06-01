@@ -9,7 +9,7 @@ set(SOURCE
         main.cpp
         mouse_cursor_icon.c
         ../src/boiler/BoilerController.cpp
-        ../vendor/ESPresso-UI/Settings/SettingsManagerDummyImpl.cpp
+        ../vendor/ESPresso-UI/Settings/SettingsManagerFile.cpp
 )
 
 set(INCLUDES

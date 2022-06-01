@@ -29,8 +29,7 @@ int main(int, char**)
 	hal_init();
 
 	auto& settings = SettingsManager::get();
-	settings["BrewTemp"] = 93.0f;
-	settings["SteamTemp"] = 150.0f;
+	settings.load();
 
 	struct hostent* hp = gethostbyname("coffee.local");
 
@@ -45,8 +44,6 @@ int main(int, char**)
 	ui->init(boiler.get());
 	boiler->setBoilerBrewTemp(settings["BrewTemp"].getAs<float>());
 	boiler->setBoilerSteamTemp(settings["SteamTemp"].getAs<float>());
-
-	settings.save();
 
 	/*Handle LitlevGL tasks (tickless mode)*/
 	while (true)

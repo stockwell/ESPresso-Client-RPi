@@ -16,10 +16,15 @@
 
 #include "EspressoUI.hpp"
 
-#define  DISP_BUF_SIZE (800 * 480)
+#define DISP_BUF_SIZE (800 * 480)
 
 static void hal_init();
 static void timer_init();
+
+namespace
+{
+	char* kTouchscreenEvDev = "/dev/input/by-path/platform-fe205000.i2c-event";
+}
 
 int main(int, char**)
 {
@@ -33,9 +38,7 @@ int main(int, char**)
 	timer_init();
 
 	auto& settings = SettingsManager::get();
-	settings["BrewTemp"] = 93.0f;
-	settings["SteamTemp"] = 150.0f;
-
+	settings.load();
 
 	struct hostent* hp = gethostbyname("coffee.local");
 
@@ -48,8 +51,6 @@ int main(int, char**)
 	auto ui = std::make_unique<EspressoUI>();
 
 	ui->init(boiler.get());
-
-	settings.save();
 
 	/*Handle LitlevGL tasks (tickless mode)*/
 	while (1)
@@ -89,7 +90,7 @@ static void hal_init()
 	disp_drv.ver_res = 480;
 	lv_disp_drv_register(&disp_drv);
 
-	evdev_set_file("/dev/input/by-path/platform-fe205000.i2c-event");
+	evdev_set_file(kTouchscreenEvDev);
 	static lv_indev_drv_t indev_drv_1;
 	lv_indev_drv_init(&indev_drv_1); /*Basic initialization*/
 	indev_drv_1.type = LV_INDEV_TYPE_POINTER;
