@@ -15,14 +15,17 @@
 #include <unistd.h>
 
 #include "EspressoUI.hpp"
+#include "EspressoConnectionScreen.hpp"
 
 #define DISP_BUF_SIZE (800 * 480)
 
 static void hal_init();
 static void timer_init();
+static std::string resolveURL();
 
 namespace
 {
+	const char* kHostname = "coffee.local";
 	char* kTouchscreenEvDev = "/dev/input/by-path/platform-fe205000.i2c-event";
 }
 
@@ -40,24 +43,38 @@ int main(int, char**)
 	auto& settings = SettingsManager::get();
 	settings.load();
 
-	struct hostent* hp = gethostbyname("coffee.local");
+	auto resolveFut = std::async(&resolveURL);
 
-	if (! hp)
-		return 1;
+	std::unique_ptr<BoilerController>	boiler;
+	std::unique_ptr<EspressoUI>			ui;
 
-	auto url = "http://" + std::string(inet_ntoa(*(struct in_addr*)(hp->h_addr_list[0])));
-
-	auto boiler = std::make_unique<BoilerController>(url);
-	auto ui = std::make_unique<EspressoUI>();
-
-	ui->init(boiler.get());
+	EspressoConnectionScreen connectionScreen(kHostname);
 
 	/*Handle LitlevGL tasks (tickless mode)*/
 	while (1)
 	{
 		lv_timer_handler();
-		boiler->tick();
 		usleep(500);
+
+		if (boiler)
+			boiler->tick();
+
+		if (resolveFut.valid() && resolveFut.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
+		{
+			auto url = resolveFut.get();
+			if (url.empty())
+			{
+				resolveFut = std::async(&resolveURL);
+				continue;
+			}
+
+			boiler = std::make_unique<BoilerController>(url);
+			ui = std::make_unique<EspressoUI>();
+
+			ui->init(boiler.get());
+			boiler->setBoilerBrewTemp(settings["BrewTemp"].getAs<float>());
+			boiler->setBoilerSteamTemp(settings["SteamTemp"].getAs<float>());
+		}
 	}
 
 	return 0;
@@ -111,3 +128,14 @@ static void timer_init()
 	signal(SIGALRM, alarmHandler);
 	ualarm(5000, 5000);
 }
+
+static std::string resolveURL()
+{
+	struct hostent* hp = gethostbyname(kHostname);
+
+	if (! hp)
+		return "";
+
+	return "http://" + std::string(inet_ntoa(*(struct in_addr*)(hp->h_addr_list[0])));
+}
+
