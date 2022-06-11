@@ -64,5 +64,7 @@ private:
 	float m_currentTemp	= 0.0;
 	float m_brewTarget = 0.0;
 	float m_steamTarget = 0.0;
+	float m_brewTargetPressure = 0.0;
+	float m_brewCurrentPressure = 0.0;
 
 };

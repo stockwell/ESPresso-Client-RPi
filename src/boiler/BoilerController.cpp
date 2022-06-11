@@ -20,11 +20,12 @@ BoilerController::BoilerController(const std::string& url)
 
 	settings["BrewTemp"].registerDelegate(this);
 	settings["SteamTemp"].registerDelegate(this);
+	settings["BrewPressure"].registerDelegate(this);
 
 	nlohmann::json pidSetJSON;
-	pidSetJSON["Kp"] = 100.0f;
-	pidSetJSON["Ki"] = 1.0f;
-	pidSetJSON["Kd"] = 0.5f;
+	pidSetJSON["Kp"] = 150.0f;
+	pidSetJSON["Ki"] = 10.0f;
+	pidSetJSON["Kd"] = 300.0f;
 
 	res = m_httpClient.Post("/api/v1/pid/terms", pidSetJSON.dump(), "application/json");
 
@@ -135,6 +136,8 @@ void BoilerController::onChanged(const std::string& key, float val)
 		m_brewTarget = val;
 	else if (key == "SteamTemp")
 		m_steamTarget = val;
+	else if (key == "BrewPressure")
+		m_brewTargetPressure = val;
 }
 
 BoilerController::PollData BoilerController::pollRemoteServer()
@@ -145,6 +148,12 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 	auto targetTemp = tempJSON["target"].get<float>();
 	auto boilerState = tempJSON["state"].get<int>();
 
+	res = m_httpClient.Get("/api/v1/pressure/raw");
+	auto pressureJSON = nlohmann::json::parse(res->body);
+	auto pressureCurrent = pressureJSON["current"].get<float>();
+	auto pressureTarget = pressureJSON["target"].get<float>();
+	auto pressureBrewTarget = pressureJSON["brew"].get<float>();
+	auto pumpState = pressureJSON["state"].get<int>();
 
 	if (m_brewTarget != tempJSON["brew"].get<float>())
 	{
@@ -162,6 +171,14 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 		res = m_httpClient.Post("/api/v1/temp/raw", steamTargetJSON.dump(), "application/json");
 	}
 
+	if (m_brewTargetPressure != pressureBrewTarget)
+	{
+		nlohmann::json brewTargetJSON;
+		brewTargetJSON["brewTarget"] = m_brewTargetPressure;
+
+		res = m_httpClient.Post("/api/v1/pressure/raw", brewTargetJSON.dump(), "application/json");
+	}
+
 	static int delay = 100;
 	if (!--delay)
 	{
@@ -169,13 +186,10 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 		res = m_httpClient.Get("/api/v1/sys/info");
 		auto sysinfoJSON = nlohmann::json::parse(res->body);
 		auto freeHeap = sysinfoJSON["free_heap"].get<int>();
+		auto minFreeHeap = sysinfoJSON["min_free_heap"].get<int>();
 
-		res = m_httpClient.Get("/api/v1/pressure/raw");
-		auto pressureJSON = nlohmann::json::parse(res->body);
-		auto pressureRaw = pressureJSON["current"].get<float>();
-
-		printf("Heap: %dKB\n", freeHeap/1024);
-		printf("Pressure: %.02f\n\n", pressureRaw);
+		printf("Heap: %dKB (%dKB)\n", freeHeap/1024, minFreeHeap/1024);
+		printf("Pressure: %.02f\n\n", pressureCurrent);
 	}
 
 	return { boilerTemp, targetTemp, boilerState };
