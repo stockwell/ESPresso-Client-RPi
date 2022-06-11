@@ -11,8 +11,13 @@
 #include "lv_drivers/display/fbdev.h"
 #include "lv_drivers/indev/evdev.h"
 
+#include <fcntl.h>
 #include <netdb.h>
+#include <stdlib.h>
 #include <unistd.h>
+#include <linux/kd.h>
+#include <linux/vt.h>
+#include <sys/ioctl.h>
 
 #include "EspressoUI.hpp"
 #include "EspressoConnectionScreen.hpp"
@@ -36,6 +41,17 @@ int main(int, char**)
 
 	/*Linux frame buffer device init*/
 	fbdev_init();
+
+	if (auto fd = open("/dev/tty0", O_RDWR | O_SYNC); fd < 0) {
+		return -1;
+	}
+	else
+	{
+		ioctl(fd, KDSETMODE, KD_GRAPHICS);
+	}
+
+	if (auto fd = open(kTouchscreenEvDev, O_RDWR); fd < 0)
+		return -1;
 
 	hal_init();
 	timer_init();
