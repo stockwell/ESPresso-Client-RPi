@@ -53,6 +53,13 @@ private:
 		int		state;
 	};
 
+	struct PIDTerms
+	{
+		float Kp = 0.0f;
+		float Ki = 0.0f;
+		float Kd = 0.0f;
+	};
+
 	PollData pollRemoteServer();
 	std::future<PollData>					m_pollFut;
 
@@ -67,4 +74,8 @@ private:
 	float m_brewTargetPressure = 0.0;
 	float m_brewCurrentPressure = 0.0;
 
+	PIDTerms m_boilerPID	= {0, 0, 0};
+	PIDTerms m_pumpPID		= {0, 0, 0};
+
+	std::unordered_map<std::string, float&> m_floatSettings;
 };

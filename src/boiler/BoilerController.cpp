@@ -22,12 +22,44 @@ BoilerController::BoilerController(const std::string& url)
 	settings["SteamTemp"].registerDelegate(this);
 	settings["BrewPressure"].registerDelegate(this);
 
+	m_floatSettings.emplace("BrewTemp", m_brewTarget);
+	m_floatSettings.emplace("SteamTemp", m_steamTarget);
+	m_floatSettings.emplace("BrewPressure", m_brewTargetPressure);
+
 	nlohmann::json pidSetJSON;
-	pidSetJSON["Kp"] = 150.0f;
-	pidSetJSON["Ki"] = 10.0f;
-	pidSetJSON["Kd"] = 300.0f;
+
+	m_boilerPID = {
+		settings["BoilerKp"].getAs<float>(),
+		settings["BoilerKi"].getAs<float>(),
+		settings["BoilerKd"].getAs<float>(),
+	};
+
+	m_pumpPID = {
+		settings["PumpKp"].getAs<float>(),
+		settings["PumpKi"].getAs<float>(),
+		settings["PumpKd"].getAs<float>(),
+	};
+
+	pidSetJSON["Pump"]   = { m_pumpPID.Kp, m_pumpPID.Ki, m_pumpPID.Kd };
+	pidSetJSON["Boiler"] = { m_boilerPID.Kp, m_boilerPID.Ki, m_boilerPID.Kd };
 
 	res = m_httpClient.Post("/api/v1/pid/terms", pidSetJSON.dump(), "application/json");
+
+	settings["BoilerKp"].registerDelegate(this);
+	settings["BoilerKi"].registerDelegate(this);
+	settings["BoilerKd"].registerDelegate(this);
+
+	m_floatSettings.emplace("BoilerKp", m_boilerPID.Kp);
+	m_floatSettings.emplace("BoilerKi", m_boilerPID.Ki);
+	m_floatSettings.emplace("BoilerKd", m_boilerPID.Kd);
+
+	settings["PumpKp"].registerDelegate(this);
+	settings["PumpKi"].registerDelegate(this);
+	settings["PumpKd"].registerDelegate(this);
+
+	m_floatSettings.emplace("PumpKp", m_pumpPID.Kp);
+	m_floatSettings.emplace("PumpKi", m_pumpPID.Ki);
+	m_floatSettings.emplace("PumpKd", m_pumpPID.Kd);
 
 	m_pollFut = std::async(&BoilerController::pollRemoteServer, this);
 }
@@ -132,12 +164,8 @@ void BoilerController::tick()
 
 void BoilerController::onChanged(const std::string& key, float val)
 {
-	if (key == "BrewTemp")
-		m_brewTarget = val;
-	else if (key == "SteamTemp")
-		m_steamTarget = val;
-	else if (key == "BrewPressure")
-		m_brewTargetPressure = val;
+	if (auto it = m_floatSettings.find(key); it != m_floatSettings.end())
+		it->second = val;
 }
 
 BoilerController::PollData BoilerController::pollRemoteServer()
@@ -154,6 +182,9 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 	auto pressureTarget = pressureJSON["target"].get<float>();
 	auto pressureBrewTarget = pressureJSON["brew"].get<float>();
 	auto pumpState = pressureJSON["state"].get<int>();
+
+	res = m_httpClient.Get("/api/v1/pid/terms");
+	auto pidTermsJSON = nlohmann::json::parse(res->body);
 
 	if (m_brewTarget != tempJSON["brew"].get<float>())
 	{
