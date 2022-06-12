@@ -58,6 +58,8 @@ private:
 		float Kp = 0.0f;
 		float Ki = 0.0f;
 		float Kd = 0.0f;
+
+		auto operator<=>(const PIDTerms&) const = default;
 	};
 
 	PollData pollRemoteServer();

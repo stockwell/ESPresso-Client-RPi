@@ -183,9 +183,6 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 	auto pressureBrewTarget = pressureJSON["brew"].get<float>();
 	auto pumpState = pressureJSON["state"].get<int>();
 
-	res = m_httpClient.Get("/api/v1/pid/terms");
-	auto pidTermsJSON = nlohmann::json::parse(res->body);
-
 	if (m_brewTarget != tempJSON["brew"].get<float>())
 	{
 		nlohmann::json brewTargetJSON;
@@ -213,7 +210,7 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 	static int delay = 100;
 	if (!--delay)
 	{
-		delay = 200;
+		delay = 100;
 		res = m_httpClient.Get("/api/v1/sys/info");
 		auto sysinfoJSON = nlohmann::json::parse(res->body);
 		auto freeHeap = sysinfoJSON["free_heap"].get<int>();
@@ -221,6 +218,29 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 
 		printf("Heap: %dKB (%dKB)\n", freeHeap/1024, minFreeHeap/1024);
 		printf("Pressure: %.02f\n\n", pressureCurrent);
+
+		res = m_httpClient.Get("/api/v1/pid/terms");
+		auto pidTermsJSON = nlohmann::json::parse(res->body);
+
+		PIDTerms boilerPID = {
+			pidTermsJSON["BoilerPID"][0].get<float>(),
+			pidTermsJSON["BoilerPID"][1].get<float>(),
+			pidTermsJSON["BoilerPID"][2].get<float>(),
+		};
+
+		PIDTerms pumpPID = {
+			pidTermsJSON["PumpPID"][0].get<float>(),
+			pidTermsJSON["PumpPID"][1].get<float>(),
+			pidTermsJSON["PumpPID"][2].get<float>(),
+		};
+
+		if (boilerPID != m_boilerPID)
+		{
+			nlohmann::json boilerPIDJSON;
+			boilerPIDJSON["boilerPID"] = { m_boilerPID.Kp, m_boilerPID.Ki, m_boilerPID.Kd };
+
+			res = m_httpClient.Post("/api/v1/pid/terms", boilerPIDJSON.dump(), "application/json");
+		}
 	}
 
 	return { boilerTemp, targetTemp, boilerState };
