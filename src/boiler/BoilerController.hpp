@@ -22,6 +22,7 @@ public:
 	virtual void onBoilerBrewTempChanged(float temp)		{ };
 	virtual void onBoilerSteamTempChanged(float temp)		{ };
 	virtual void onBoilerStateChanged(BoilerState state)	{ };
+	virtual void onBoilerPressureChanged(float temp)		{ };
 };
 
 class BoilerController : public SettingDelegate
@@ -38,6 +39,7 @@ public:
 
 	void updateBoilerTargetTemp(float temp);
 	void updateBoilerCurrentTemp(float temp);
+	void updateBoilerCurrentPressure(float pressure);
 	void updateBoilerState(int state);
 
 	void tick();
@@ -50,6 +52,7 @@ private:
 	{
 		float	currentTemp;
 		float	targetTemp;
+		float 	currentPressure;
 		int		state;
 	};
 

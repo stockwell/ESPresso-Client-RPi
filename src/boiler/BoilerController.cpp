@@ -40,8 +40,8 @@ BoilerController::BoilerController(const std::string& url)
 		settings["PumpKd"].getAs<float>(),
 	};
 
-	pidSetJSON["Pump"]   = { m_pumpPID.Kp, m_pumpPID.Ki, m_pumpPID.Kd };
-	pidSetJSON["Boiler"] = { m_boilerPID.Kp, m_boilerPID.Ki, m_boilerPID.Kd };
+	pidSetJSON["PumpPID"]   = { m_pumpPID.Kp, m_pumpPID.Ki, m_pumpPID.Kd };
+	pidSetJSON["BoilerPID"] = { m_boilerPID.Kp, m_boilerPID.Ki, m_boilerPID.Kd };
 
 	res = m_httpClient.Post("/api/v1/pid/terms", pidSetJSON.dump(), "application/json");
 
@@ -133,6 +133,17 @@ void BoilerController::setBoilerBrewTemp(float temp)
 		delegate->onBoilerBrewTempChanged(temp);
 }
 
+void BoilerController::updateBoilerCurrentPressure(float pressure)
+{
+	if (m_brewCurrentPressure == pressure)
+		return;
+
+	m_brewCurrentPressure = pressure;
+
+	for (auto delegate : m_delegates)
+		delegate->onBoilerPressureChanged(pressure);
+}
+
 void BoilerController::setBoilerSteamTemp(float temp)
 {
 	if (m_steamTarget == temp)
@@ -157,6 +168,8 @@ void BoilerController::tick()
 		updateBoilerCurrentTemp(val.currentTemp);
 		updateBoilerTargetTemp(val.targetTemp);
 		updateBoilerState(val.state);
+
+		updateBoilerCurrentPressure(val.currentPressure);
 
 		m_pollFut = std::async(std::launch::async, &BoilerController::pollRemoteServer, this);
 	}
@@ -207,6 +220,7 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 		res = m_httpClient.Post("/api/v1/pressure/raw", brewTargetJSON.dump(), "application/json");
 	}
 
+
 	static int delay = 100;
 	if (!--delay)
 	{
@@ -217,7 +231,6 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 		auto minFreeHeap = sysinfoJSON["min_free_heap"].get<int>();
 
 		printf("Heap: %dKB (%dKB)\n", freeHeap/1024, minFreeHeap/1024);
-		printf("Pressure: %.02f\n\n", pressureCurrent);
 
 		res = m_httpClient.Get("/api/v1/pid/terms");
 		auto pidTermsJSON = nlohmann::json::parse(res->body);
@@ -237,11 +250,11 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 		if (boilerPID != m_boilerPID)
 		{
 			nlohmann::json boilerPIDJSON;
-			boilerPIDJSON["boilerPID"] = { m_boilerPID.Kp, m_boilerPID.Ki, m_boilerPID.Kd };
+			boilerPIDJSON["BoilerPID"] = { m_boilerPID.Kp, m_boilerPID.Ki, m_boilerPID.Kd };
 
 			res = m_httpClient.Post("/api/v1/pid/terms", boilerPIDJSON.dump(), "application/json");
 		}
 	}
 
-	return { boilerTemp, targetTemp, boilerState };
+	return { boilerTemp, targetTemp, pressureCurrent, boilerState };
 }
