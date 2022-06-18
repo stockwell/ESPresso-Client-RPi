@@ -16,6 +16,13 @@ BoilerController::BoilerController(const std::string& url)
 	m_brewTarget = tempJSON["brew"].get<float>();
 	m_steamTarget = tempJSON["steam"].get<float>();
 
+	res = m_httpClient.Get("/api/v1/pressure/raw");
+	auto pressureJSON = nlohmann::json::parse(res->body);
+
+	auto pressureCurrent = pressureJSON["current"].get<float>();
+	auto pressureTarget = pressureJSON["target"].get<float>();
+	m_brewTargetPressure = pressureJSON["brew"].get<float>();
+
 	auto& settings = SettingsManager::get();
 
 	settings["BrewTemp"].registerDelegate(this);
