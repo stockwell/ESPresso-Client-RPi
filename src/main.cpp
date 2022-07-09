@@ -99,6 +99,7 @@ int main(int, char**)
 			ui->init(boiler.get());
 			boiler->setBoilerBrewTemp(settings["BrewTemp"].getAs<float>());
 			boiler->setBoilerSteamTemp(settings["SteamTemp"].getAs<float>());
+			boiler->setBoilerBrewPressure(settings["BrewPressure"].getAs<float>());
 		}
 	}
 

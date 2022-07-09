@@ -140,6 +140,22 @@ void BoilerController::setBoilerBrewTemp(float temp)
 		delegate->onBoilerBrewTempChanged(temp);
 }
 
+void BoilerController::setBoilerBrewPressure(float pressure)
+{
+	if (m_brewTargetPressure == pressure)
+		return;
+
+	m_brewTargetPressure = pressure;
+
+	nlohmann::json pressureJSON;
+	pressureJSON["brewTarget"] = pressure;
+
+	auto res = m_httpClient.Post("/api/v1/pressure/raw", pressureJSON.dump(), "application/json");
+
+//	for (auto delegate : m_delegates)
+//		delegate->onBoilerBrewTempChanged(temp);
+}
+
 void BoilerController::updateBoilerCurrentPressure(float pressure)
 {
 	if (m_brewCurrentPressure == pressure)

@@ -36,6 +36,7 @@ public:
 
 	void setBoilerBrewTemp(float temp);
 	void setBoilerSteamTemp(float temp);
+	void setBoilerBrewPressure(float pressure);
 
 	void updateBoilerTargetTemp(float temp);
 	void updateBoilerCurrentTemp(float temp);
