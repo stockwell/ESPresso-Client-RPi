@@ -78,7 +78,7 @@ private:
 	float m_brewTarget = 0.0;
 	float m_steamTarget = 0.0;
 	float m_brewTargetPressure = 0.0;
-	float m_brewCurrentPressure = 0.0;
+	float m_brewCurrentPressure = -1.0f;
 
 	PIDTerms m_boilerPID	= {0, 0, 0};
 	PIDTerms m_pumpPID		= {0, 0, 0};
