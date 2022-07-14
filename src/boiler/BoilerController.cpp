@@ -244,39 +244,42 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 	}
 
 
-	static int delay = 100;
-	if (!--delay)
+	res = m_httpClient.Get("/api/v1/sys/info");
+	auto sysinfoJSON = nlohmann::json::parse(res->body);
+	auto freeHeap = sysinfoJSON["free_heap"].get<int>();
+	auto minFreeHeap = sysinfoJSON["min_free_heap"].get<int>();
+
+	printf("Heap: %dKB (%dKB)\n", freeHeap/1024, minFreeHeap/1024);
+
+	res = m_httpClient.Get("/api/v1/pid/terms");
+	auto pidTermsJSON = nlohmann::json::parse(res->body);
+
+	PIDTerms boilerPID = {
+		 pidTermsJSON["BoilerPID"][0].get<float>(),
+		 pidTermsJSON["BoilerPID"][1].get<float>(),
+		 pidTermsJSON["BoilerPID"][2].get<float>(),
+	};
+
+	PIDTerms pumpPID = {
+		 pidTermsJSON["PumpPID"][0].get<float>(),
+		 pidTermsJSON["PumpPID"][1].get<float>(),
+		 pidTermsJSON["PumpPID"][2].get<float>(),
+	};
+
+	if (boilerPID != m_boilerPID)
 	{
-		delay = 100;
-		res = m_httpClient.Get("/api/v1/sys/info");
-		auto sysinfoJSON = nlohmann::json::parse(res->body);
-		auto freeHeap = sysinfoJSON["free_heap"].get<int>();
-		auto minFreeHeap = sysinfoJSON["min_free_heap"].get<int>();
+		 nlohmann::json pidSetJSON;
+		 pidSetJSON["BoilerPID"] = { m_boilerPID.Kp, m_boilerPID.Ki, m_boilerPID.Kd };
 
-		printf("Heap: %dKB (%dKB)\n", freeHeap/1024, minFreeHeap/1024);
+		 res = m_httpClient.Post("/api/v1/pid/terms", pidSetJSON.dump(), "application/json");
+	}
 
-		res = m_httpClient.Get("/api/v1/pid/terms");
-		auto pidTermsJSON = nlohmann::json::parse(res->body);
+	if (pumpPID != m_pumpPID)
+	{
+		 nlohmann::json pidSetJSON;
+		 pidSetJSON["PumpPID"]   = { m_pumpPID.Kp, m_pumpPID.Ki, m_pumpPID.Kd };
 
-		PIDTerms boilerPID = {
-			pidTermsJSON["BoilerPID"][0].get<float>(),
-			pidTermsJSON["BoilerPID"][1].get<float>(),
-			pidTermsJSON["BoilerPID"][2].get<float>(),
-		};
-
-		PIDTerms pumpPID = {
-			pidTermsJSON["PumpPID"][0].get<float>(),
-			pidTermsJSON["PumpPID"][1].get<float>(),
-			pidTermsJSON["PumpPID"][2].get<float>(),
-		};
-
-		if (boilerPID != m_boilerPID)
-		{
-			nlohmann::json boilerPIDJSON;
-			boilerPIDJSON["BoilerPID"] = { m_boilerPID.Kp, m_boilerPID.Ki, m_boilerPID.Kd };
-
-			res = m_httpClient.Post("/api/v1/pid/terms", boilerPIDJSON.dump(), "application/json");
-		}
+		 res = m_httpClient.Post("/api/v1/pid/terms", pidSetJSON.dump(), "application/json");
 	}
 
 	return { boilerTemp, targetTemp, pressureCurrent, boilerState };
