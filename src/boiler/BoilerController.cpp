@@ -68,6 +68,8 @@ BoilerController::BoilerController(const std::string& url)
 	m_floatSettings.emplace("PumpKi", m_pumpPID.Ki);
 	m_floatSettings.emplace("PumpKd", m_pumpPID.Kd);
 
+	res = m_httpClient.Post("/api/v1/boiler/clear-inhibit", "", "application/json");
+
 	m_pollFut = std::async(&BoilerController::pollRemoteServer, this);
 }
 

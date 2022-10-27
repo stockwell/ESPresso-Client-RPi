@@ -12,6 +12,7 @@ enum class BoilerState
 	Heating,
 	Ready,
 	Brewing,
+	Inhibited,
 };
 
 class BoilerTemperatureDelegate
