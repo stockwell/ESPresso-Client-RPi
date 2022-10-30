@@ -10,6 +10,7 @@
 #include "lvgl.h"
 #include "lv_drivers/display/fbdev.h"
 #include "lv_drivers/indev/evdev.h"
+#include "lv_drivers/indev/evdev2.h"
 
 #include <fcntl.h>
 #include <netdb.h>
@@ -26,12 +27,14 @@
 
 static void hal_init();
 static void timer_init();
-static std::string resolveURL();
+static std::string resolveURL(const char* hostname);
 
 namespace
 {
-	const char* kHostname = "coffee.local";
+	const char* kHostnameCore = "coffee.local";
+	const char* kHostnameScales = "espresso-scales.local";
 	char* kTouchscreenEvDev = "/dev/input/by-path/platform-fe205000.i2c-event";
+	char* kKeyboardEvDev = "/dev/input/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usb-0:1.2:1.0-event-kbd";
 }
 
 int main(int, char**)
@@ -59,16 +62,17 @@ int main(int, char**)
 	auto& settings = SettingsManager::get();
 	settings.load();
 
-	auto resolveFut = std::async(&resolveURL);
+	auto resolveFut = std::async(&resolveURL, kHostnameCore);
 
 	std::unique_ptr<BoilerController>	boiler;
+	std::unique_ptr<ScalesController>	scales;
 	std::unique_ptr<EspressoUI>			ui;
 
-	EspressoConnectionScreen connectionScreen(kHostname);
+	EspressoConnectionScreen connectionScreen(kHostnameCore);
 
 	bool pendingResolve = true;
 
-	printf("Starting ESPresso-Client, resolving %s... ", kHostname);
+	printf("Starting ESPresso-Client, resolving %s... ", kHostnameCore);
 
 	/*Handle LitlevGL tasks (tickless mode)*/
 	while (1)
@@ -79,24 +83,39 @@ int main(int, char**)
 		if (boiler)
 			boiler->tick();
 
+		if (scales)
+			scales->tick();
+
 		if (pendingResolve)
 		{
 			if (lv_tick_get() < 4700 || resolveFut.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
 				continue;
 
+			if (resolveScalesFut.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
+				continue;
+
 			auto url = resolveFut.get();
 			if (url.empty())
 			{
-				resolveFut = std::async(&resolveURL);
+				resolveFut = std::async(&resolveURL, kHostnameCore);
+				continue;
+			}
+
+			auto urlScales = resolveScalesFut.get();
+			if (urlScales.empty())
+			{
+				resolveScalesFut = std::async(&resolveURL, kHostnameScales);
 				continue;
 			}
 
 			pendingResolve = false;
 
 			boiler = std::make_unique<BoilerController>(url);
+			scales = std::make_unique<ScalesController>(urlScales);
 			ui = std::make_unique<EspressoUI>();
 
-			ui->init(boiler.get());
+			ui->init(boiler.get(), scales.get());
+
 			boiler->setBoilerBrewTemp(settings["BrewTemp"].getAs<float>());
 			boiler->setBoilerSteamTemp(settings["SteamTemp"].getAs<float>());
 			boiler->setBoilerBrewPressure(settings["BrewPressure"].getAs<float>());
@@ -141,6 +160,14 @@ static void hal_init()
 	/*This function will be called periodically (by the library) to get the mouse position and state*/
 	indev_drv_1.read_cb = evdev_read;
 	lv_indev_t* mouse_indev = lv_indev_drv_register(&indev_drv_1);
+
+	evdev2_set_file(kKeyboardEvDev);
+	static lv_indev_drv_t indev_drv_2;
+	lv_indev_drv_init(&indev_drv_2); /*Basic initialization*/
+	indev_drv_2.type = LV_INDEV_TYPE_KEYPAD;
+
+	indev_drv_2.read_cb = evdev2_read;
+	lv_indev_t* kb_indev = lv_indev_drv_register(&indev_drv_2);
 }
 
 void alarmHandler(int sig_num)
@@ -155,14 +182,12 @@ static void timer_init()
 	ualarm(5000, 5000);
 }
 
-static std::string resolveURL()
+static std::string resolveURL(const char* hostname)
 {
-	struct hostent* hp = gethostbyname(kHostname);
+	struct hostent* hp = gethostbyname(hostname);
 
 	if (! hp)
 		return "";
-
-	printf("completed after %u ticks\n", lv_tick_get());
 
 	return "http://" + std::string(inet_ntoa(*(struct in_addr*)(hp->h_addr_list[0])));
 }
