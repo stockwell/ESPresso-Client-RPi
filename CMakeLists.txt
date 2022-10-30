@@ -8,12 +8,14 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
 set(SOURCE
 		src/main.cpp
 		src/boiler/BoilerController.cpp
+		src/scales/ScalesController.cpp
 		vendor/ESPresso-UI/Settings/SettingsManagerFile.cpp
 )
 
 set(INCLUDES
 		src
 		src/boiler
+		src/scales
 		vendor
 		vendor/cpp-httplib
 		vendor/json/single_include

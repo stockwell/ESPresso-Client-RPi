@@ -63,6 +63,7 @@ int main(int, char**)
 	settings.load();
 
 	auto resolveFut = std::async(&resolveURL, kHostnameCore);
+	auto resolveScalesFut = std::async(&resolveURL, kHostnameScales);
 
 	std::unique_ptr<BoilerController>	boiler;
 	std::unique_ptr<ScalesController>	scales;
@@ -72,7 +73,7 @@ int main(int, char**)
 
 	bool pendingResolve = true;
 
-	printf("Starting ESPresso-Client, resolving %s... ", kHostnameCore);
+	printf("Starting ESPresso-Client, resolving %s...\n", kHostnameCore);
 
 	/*Handle LitlevGL tasks (tickless mode)*/
 	while (1)
