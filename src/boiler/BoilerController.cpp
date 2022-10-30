@@ -71,7 +71,7 @@ BoilerController::BoilerController(const std::string& url)
 	res = m_httpClient.Post("/api/v1/boiler/clear-inhibit", "", "application/json");
 
 	settings["ManualPumpControl"].registerDelegate(this);
-	m_floatSettings.emplace("ManualPumpControl", m_pumpManualControl);
+	m_floatSettings.emplace("ManualPumpControl", m_pumpDuty);
 
 	m_pollFut = std::async(&BoilerController::pollRemoteServer, this);
 }
@@ -126,7 +126,14 @@ void BoilerController::updateBoilerState(int state)
 
 	for (auto delegate : m_delegates)
 		delegate->onBoilerStateChanged(currentState);
+}
 
+void BoilerController::updatePumpDuty(float duty)
+{
+	if (m_pumpDuty == duty)
+		return;
+
+	m_pumpDuty = duty;
 }
 
 void BoilerController::setBoilerBrewTemp(float temp)
@@ -222,6 +229,7 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 	auto pressureCurrent = pressureJSON["current"].get<float>();
 	auto pressureTarget = pressureJSON["target"].get<float>();
 	auto pressureBrewTarget = pressureJSON["brew"].get<float>();
+	auto pumpDuty = pressureJSON["manual-duty"].get<float>();
 	auto pumpState = pressureJSON["state"].get<int>();
 
 	if (m_brewTarget != tempJSON["brew"].get<float>())
@@ -248,6 +256,14 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 		res = m_httpClient.Post("/api/v1/pressure/raw", brewTargetJSON.dump(), "application/json");
 	}
 
+	if (m_pumpDuty != pumpDuty)
+	{
+		nlohmann::json pumpControlJSON;
+		pumpControlJSON["Duty"] = m_pumpDuty;
+
+		res = m_httpClient.Post("/api/v1/pump/manual-control", pumpControlJSON.dump(), "application/json");
+	}
+
 	res = m_httpClient.Get("/api/v1/sys/info");
 	auto sysinfoJSON = nlohmann::json::parse(res->body);
 	auto freeHeap = sysinfoJSON["free_heap"].get<int>();
@@ -256,8 +272,7 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 	static auto printTrigger = 20;
 	if (!--printTrigger)
 	{
-		printf("Heap: %dKB (%dKB)\n", freeHeap/1024, minFreeHeap/1024);
-		printf("%f\n", m_pumpManualControl);
+		printf("Core -- Heap: %dKB (%dKB)\n", freeHeap/1024, minFreeHeap/1024);
 
 		printTrigger = 20;
 	}
@@ -293,12 +308,5 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 		 res = m_httpClient.Post("/api/v1/pid/terms", pidSetJSON.dump(), "application/json");
 	}
 
-	{
-		nlohmann::json pumpControlJSON;
-		pumpControlJSON["Duty"] = m_pumpManualControl;
-
-		res = m_httpClient.Post("/api/v1/pump/manual-control", pumpControlJSON.dump(), "application/json");
-	}
-
-	return { boilerTemp, targetTemp, pressureCurrent, boilerState };
+	return { boilerTemp, targetTemp, pressureCurrent, pumpDuty, boilerState};
 }

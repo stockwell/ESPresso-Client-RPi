@@ -43,6 +43,7 @@ public:
 	void updateBoilerTargetTemp(float temp);
 	void updateBoilerCurrentTemp(float temp);
 	void updateBoilerCurrentPressure(float pressure);
+	void updatePumpDuty(float duty);
 	void updateBoilerState(int state);
 
 	void tick();
@@ -56,6 +57,7 @@ private:
 		float	currentTemp;
 		float	targetTemp;
 		float 	currentPressure;
+		float	pumpDuty;
 		int		state;
 	};
 
@@ -81,7 +83,7 @@ private:
 	float m_steamTarget = 0.0;
 	float m_brewTargetPressure = 0.0;
 	float m_brewCurrentPressure = -1.0f;
-	float m_pumpManualControl = 0.0f;
+	float m_pumpDuty = 0.0f;
 
 	PIDTerms m_boilerPID	= {0, 0, 0};
 	PIDTerms m_pumpPID		= {0, 0, 0};
