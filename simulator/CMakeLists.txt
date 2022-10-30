@@ -9,11 +9,13 @@ set(SOURCE
         main.cpp
         mouse_cursor_icon.c
         ../src/boiler/BoilerController.cpp
+        ../src/scales/ScalesController.cpp
         ../vendor/ESPresso-UI/Settings/SettingsManagerFile.cpp
 )
 
 set(INCLUDES
         ../src/boiler
+        ../src/scales
         ../vendor
         ../vendor/cpp-httplib
         ../vendor/json/single_include

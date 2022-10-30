@@ -21,15 +21,16 @@
 
 static void hal_init();
 static void timer_init();
-static std::string resolveURL();
+static std::string resolveURL(const char* hostname);
 
 namespace
 {
 	const char* kHostname = "coffee.local";
+	const char* kHostnameScales = "espresso-scales.local";
 	const auto kMinTicks = 0;//4800;
 }
 
-int main(int, char**)
+[[noreturn]]int main(int, char**)
 {
 	/*Initialize LVGL*/
 	lv_init();
@@ -38,9 +39,11 @@ int main(int, char**)
 	auto& settings = SettingsManager::get();
 	settings.load();
 
-	auto resolveFut = std::async(&resolveURL);
+	auto resolveFut = std::async(&resolveURL, kHostname);
+	auto resolveScalesFut = std::async(&resolveURL, kHostnameScales);
 
 	std::unique_ptr<BoilerController>	boiler;
+	std::unique_ptr<ScalesController>	scales;
 	std::unique_ptr<EspressoUI>			ui;
 
 	EspressoConnectionScreen connectionScreen(kHostname);
@@ -55,6 +58,9 @@ int main(int, char**)
 		if (boiler)
 			boiler->tick();
 
+		if (scales)
+			scales->tick();
+
 		lv_timer_handler();
 		usleep(500);
 
@@ -63,26 +69,35 @@ int main(int, char**)
 			if (resolveFut.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
 				continue;
 
-			auto url = resolveFut.get();
+			if (resolveScalesFut.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
+				continue;
 
+			auto url = resolveFut.get();
 			if (url.empty())
 			{
-				resolveFut = std::async(&resolveURL);
+				resolveFut = std::async(&resolveURL, kHostname);
+				continue;
+			}
+
+			auto urlScales = resolveScalesFut.get();
+			if (urlScales.empty())
+			{
+				resolveScalesFut = std::async(&resolveURL, kHostnameScales);
 				continue;
 			}
 
 			pendingResolve = false;
 
 			boiler = std::make_unique<BoilerController>(url);
+			scales = std::make_unique<ScalesController>(urlScales);
+
 			ui = std::make_unique<EspressoUI>();
 
-			ui->init(boiler.get());
+			ui->init(boiler.get(), scales.get());
 			boiler->setBoilerBrewTemp(settings["BrewTemp"].getAs<float>());
 			boiler->setBoilerSteamTemp(settings["SteamTemp"].getAs<float>());
 		}
 	}
-
-	return 0;
 }
 
 /**********************
@@ -162,15 +177,12 @@ static void timer_init()
 	ualarm(5000, 5000);
 }
 
-static std::string resolveURL()
+static std::string resolveURL(const char* hostname)
 {
-	struct hostent* hp = gethostbyname(kHostname);
+	struct hostent* hp = gethostbyname(hostname);
 
 	if (! hp)
 		return "";
 
-	printf("completed after %u ticks\n", lv_tick_get());
-
 	return "http://" + std::string(inet_ntoa(*(struct in_addr*)(hp->h_addr_list[0])));
 }
-
