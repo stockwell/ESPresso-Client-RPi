@@ -13,6 +13,7 @@ enum class BoilerState
 	Ready,
 	Brewing,
 	Inhibited,
+	Idle,
 };
 
 class BoilerTemperatureDelegate
@@ -80,6 +81,7 @@ private:
 	float m_steamTarget = 0.0;
 	float m_brewTargetPressure = 0.0;
 	float m_brewCurrentPressure = -1.0f;
+	float m_pumpManualControl = 0.0f;
 
 	PIDTerms m_boilerPID	= {0, 0, 0};
 	PIDTerms m_pumpPID		= {0, 0, 0};
