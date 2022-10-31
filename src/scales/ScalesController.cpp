@@ -52,10 +52,16 @@ void ScalesController::tick()
 ScalesController::PollData ScalesController::pollRemoteServer()
 {
 	auto res = m_httpClient.Get("/api/v1/weight");
+	if (! res)
+		return { -999.9f };
+
 	auto tempJSON = nlohmann::json::parse(res->body);
 	auto currentWeight = tempJSON["weight"].get<float>();
 
 	res = m_httpClient.Get("/api/v1/sys/info");
+	if (! res)
+		return { -999.9f };
+
 	auto sysinfoJSON = nlohmann::json::parse(res->body);
 	auto freeHeap = sysinfoJSON["free_heap"].get<int>();
 	auto minFreeHeap = sysinfoJSON["min_free_heap"].get<int>();

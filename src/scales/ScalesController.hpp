@@ -38,5 +38,5 @@ private:
 	std::set<ScalesWeightDelegate*>		m_delegates;
 	httplib::Client						m_httpClient;
 
-	float 								m_currentWeight = 0.0f;
+	float 								m_currentWeight = -999.9f;
 };

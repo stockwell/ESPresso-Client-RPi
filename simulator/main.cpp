@@ -40,7 +40,6 @@ namespace
 	settings.load();
 
 	auto resolveFut = std::async(&resolveURL, kHostname);
-	auto resolveScalesFut = std::async(&resolveURL, kHostnameScales);
 
 	std::unique_ptr<BoilerController>	boiler;
 	std::unique_ptr<ScalesController>	scales;
@@ -69,9 +68,6 @@ namespace
 			if (resolveFut.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
 				continue;
 
-			if (resolveScalesFut.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
-				continue;
-
 			auto url = resolveFut.get();
 			if (url.empty())
 			{
@@ -79,17 +75,10 @@ namespace
 				continue;
 			}
 
-			auto urlScales = resolveScalesFut.get();
-			if (urlScales.empty())
-			{
-				resolveScalesFut = std::async(&resolveURL, kHostnameScales);
-				continue;
-			}
-
 			pendingResolve = false;
 
 			boiler = std::make_unique<BoilerController>(url);
-			scales = std::make_unique<ScalesController>(urlScales);
+			scales = std::make_unique<ScalesController>(kHostnameScales);
 
 			ui = std::make_unique<EspressoUI>();
 

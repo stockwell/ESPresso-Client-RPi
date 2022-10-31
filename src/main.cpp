@@ -92,9 +92,6 @@ int main(int, char**)
 			if (lv_tick_get() < 4700 || resolveFut.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
 				continue;
 
-			if (resolveScalesFut.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
-				continue;
-
 			auto url = resolveFut.get();
 			if (url.empty())
 			{
@@ -102,17 +99,10 @@ int main(int, char**)
 				continue;
 			}
 
-			auto urlScales = resolveScalesFut.get();
-			if (urlScales.empty())
-			{
-				resolveScalesFut = std::async(&resolveURL, kHostnameScales);
-				continue;
-			}
-
 			pendingResolve = false;
 
 			boiler = std::make_unique<BoilerController>(url);
-			scales = std::make_unique<ScalesController>(urlScales);
+			scales = std::make_unique<ScalesController>(kHostnameScales);
 			ui = std::make_unique<EspressoUI>();
 
 			ui->init(boiler.get(), scales.get());
