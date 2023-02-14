@@ -141,7 +141,10 @@ static void hal_init()
 	disp_drv.flush_cb = fbdev_flush;
 	disp_drv.hor_res = 800;
 	disp_drv.ver_res = 480;
+	disp_drv.sw_rotate=1;
 	lv_disp_drv_register(&disp_drv);
+
+	lv_disp_set_rotation(NULL, LV_DISP_ROT_180);
 
 	evdev_set_file(kTouchscreenEvDev);
 	static lv_indev_drv_t indev_drv_1;
