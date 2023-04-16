@@ -72,6 +72,7 @@ BoilerController::BoilerController(const std::string& url)
 
 	settings["ManualPumpControl"].registerDelegate(this);
 	m_floatSettings.emplace("ManualPumpControl", m_pumpDuty);
+	m_boolSettings.emplace("ManualPumpControlEnabled", m_pumpManualMode);
 
 	m_pollFut = std::async(&BoilerController::pollRemoteServer, this);
 }
@@ -216,6 +217,12 @@ void BoilerController::onChanged(const std::string& key, float val)
 		it->second = val;
 }
 
+void BoilerController::onChanged(const std::string& key, bool val)
+{
+	if (auto it = m_boolSettings.find(key); it != m_boolSettings.end())
+		it->second = val;
+}
+
 BoilerController::PollData BoilerController::pollRemoteServer()
 {
 	auto res = m_httpClient.Get("/api/v1/temp/raw");
@@ -230,6 +237,7 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 	auto pressureTarget = pressureJSON["target"].get<float>();
 	auto pressureBrewTarget = pressureJSON["brew"].get<float>();
 	auto pumpDuty = pressureJSON["manual-duty"].get<float>();
+	auto pumpManualMode = pressureJSON["manual-mode"].get<bool>();
 	auto pumpState = pressureJSON["state"].get<int>();
 
 	if (m_brewTarget != tempJSON["brew"].get<float>())
@@ -256,10 +264,11 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 		res = m_httpClient.Post("/api/v1/pressure/raw", brewTargetJSON.dump(), "application/json");
 	}
 
-	if (m_pumpDuty != pumpDuty)
+	if (m_pumpDuty != pumpDuty || m_pumpManualMode != pumpManualMode)
 	{
 		nlohmann::json pumpControlJSON;
 		pumpControlJSON["Duty"] = m_pumpDuty;
+		pumpControlJSON["ManualControl"] = m_pumpManualMode;
 
 		res = m_httpClient.Post("/api/v1/pump/manual-control", pumpControlJSON.dump(), "application/json");
 	}

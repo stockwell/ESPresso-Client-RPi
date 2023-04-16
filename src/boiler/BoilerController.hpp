@@ -50,6 +50,7 @@ public:
 
 	// SettingDelegate i/f
 	void onChanged(const std::string& key, float val) override;
+	void onChanged(const std::string& key, bool val) override;
 
 private:
 	struct PollData
@@ -85,8 +86,11 @@ private:
 	float m_brewCurrentPressure = -1.0f;
 	float m_pumpDuty = 0.0f;
 
+	bool m_pumpManualMode = false;
+
 	PIDTerms m_boilerPID	= {0, 0, 0};
 	PIDTerms m_pumpPID		= {0, 0, 0};
 
 	std::unordered_map<std::string, float&> m_floatSettings;
+	std::unordered_map<std::string, bool&>  m_boolSettings;
 };
