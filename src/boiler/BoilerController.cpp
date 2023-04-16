@@ -72,6 +72,8 @@ BoilerController::BoilerController(const std::string& url)
 
 	settings["ManualPumpControl"].registerDelegate(this);
 	m_floatSettings.emplace("ManualPumpControl", m_pumpDuty);
+
+	settings["ManualPumpControlEnabled"].registerDelegate(this);
 	m_boolSettings.emplace("ManualPumpControlEnabled", m_pumpManualMode);
 
 	m_pollFut = std::async(&BoilerController::pollRemoteServer, this);
