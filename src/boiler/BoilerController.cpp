@@ -76,6 +76,9 @@ BoilerController::BoilerController(const std::string& url)
 	settings["ManualPumpControlEnabled"].registerDelegate(this);
 	m_boolSettings.emplace("ManualPumpControlEnabled", m_pumpManualMode);
 
+	settings["HotWaterModeEnabled"].registerDelegate(this);
+	m_boolSettings.emplace("HotWaterModeEnabled", m_hotWaterMode);
+
 	m_pollFut = std::async(&BoilerController::pollRemoteServer, this);
 }
 
@@ -240,6 +243,7 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 	auto pressureBrewTarget = pressureJSON["brew"].get<float>();
 	auto pumpDuty = pressureJSON["manual-duty"].get<float>();
 	auto pumpManualMode = pressureJSON["manual-mode"].get<bool>();
+	auto hotWaterMode = pressureJSON["hot-water-mode"].get<bool>();
 	auto pumpState = pressureJSON["state"].get<int>();
 
 	if (m_brewTarget != tempJSON["brew"].get<float>())
@@ -273,6 +277,14 @@ BoilerController::PollData BoilerController::pollRemoteServer()
 		pumpControlJSON["ManualControl"] = m_pumpManualMode;
 
 		res = m_httpClient.Post("/api/v1/pump/manual-control", pumpControlJSON.dump(), "application/json");
+	}
+
+	if (m_hotWaterMode != hotWaterMode)
+	{
+		nlohmann::json pumpControlJSON;
+		pumpControlJSON["HotWaterMode"] = m_hotWaterMode;
+
+		res = m_httpClient.Post("/api/v1/pump/hot-water-mode", pumpControlJSON.dump(), "application/json");
 	}
 
 	res = m_httpClient.Get("/api/v1/sys/info");

@@ -87,6 +87,7 @@ private:
 	float m_pumpDuty = 0.0f;
 
 	bool m_pumpManualMode = false;
+	bool m_hotWaterMode = false;
 
 	PIDTerms m_boilerPID	= {0, 0, 0};
 	PIDTerms m_pumpPID		= {0, 0, 0};
